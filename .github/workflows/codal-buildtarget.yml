@@ -1,0 +1,28 @@
+name: codal-buildtarget
+
+on:
+  push:
+    branches: 
+      - main
+  create:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    container:
+      image: letssteam/makecode-toolchain:latest
+      options: --user 1001 --security-opt no-new-privileges
+    env:
+      REPO_NAME: ${{ github.event.repository.name }}
+      REPO_PATH: codal/libraries/${{ github.event.repository.name }}
+      REPO_URL: ${{ github.event.repository.clone_url }}
+    steps:
+      - name: checkout codal
+        uses: actions/checkout@v2
+        with:
+          repository: letssteam/codal
+          path: codal
+      - name: codal build
+        run: |
+          cd codal
+          ./build.py -d $REPO_NAME
