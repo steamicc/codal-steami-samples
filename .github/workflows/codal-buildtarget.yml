@@ -12,17 +12,40 @@ jobs:
     container:
       image: letssteam/makecode-toolchain:latest
       options: --user 1001 --security-opt no-new-privileges
+    strategy:
+      matrix:
+        samples: ['BUTTONS_SAMPLE','SERIAL_SAMPLE','SIGLE_WIRE_SERIAL_SAMPLE','SAI_SAMPLE','VL53L1X_SAMPLE','HTS221_SAMPLE','WSEN_PADS_SAMPLE','SCANNER_I2C_SAMPLE','OLED_SSD1327_SAMPLE','APDS9960_SAMPLE','BQ27441_SAMPLE','RTC_SAMPLE','DAPLINK_FLASH_SAMPLE','DEMO_SAMPLE','FUS_WS_OPERATOR_SAMPLE','BLE_BROADCAST_SAMPLE','OOB_SAMPLE','BLINK_SAMPLE']
     env:
       REPO_NAME: ${{ github.event.repository.name }}
       REPO_PATH: codal/libraries/${{ github.event.repository.name }}
       REPO_URL: ${{ github.event.repository.clone_url }}
     steps:
       - name: checkout codal
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
         with:
           repository: letssteam/codal
           path: codal
+      - name: create codal.json
+        run: |
+          echo \
+            "{
+              \"target\": {
+              \"name\": \"$REPO_NAME\", 
+              \"url\": \"$REPO_URL\",
+              \"branch\": \"main\",
+              \"type\": \"git\",
+              \"dev\": true
+              },
+              \"config\":{
+              \"${{ matrix.samples }}\":1
+              }
+            }" > codal/codal.json
       - name: codal build
         run: |
           cd codal
-          ./build.py -d $REPO_NAME
+          ./build.py -d
+      - name: Upload hex file
+        uses: actions/upload-artifact@v4
+        with:
+          name: STM32-${{ matrix.samples }}.hex
+          path: codal/STM32.hex
