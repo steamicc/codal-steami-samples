@@ -1,0 +1,45 @@
+name: Static Analysis Report
+
+on:
+  workflow_dispatch:
+  push:
+    branches: '*'
+  pull_request:
+    branches: '*'
+
+jobs:
+  cppcheck:
+    runs-on: ubuntu-latest
+    container:
+      image: letssteam/makecode-toolchain:latest
+      options: --user 1001 --security-opt no-new-privileges
+    env:
+      REPO_NAME: ${{ github.event.repository.name }}
+      REPO_PATH: codal/libraries/${{ github.event.repository.name }}
+      REPO_URL: ${{ github.event.repository.clone_url }}
+    name: Run CppCheck against the codebase + libraries
+    steps:
+      - name: checkout codal
+        uses: actions/checkout@v4
+        with:
+          repository: letssteam/codal
+          path: codal
+      - name: codal build
+        run: |
+          cd codal
+          ./build.py -d $REPO_NAME
+      - name: Run CppCheck
+        run: |
+          cd codal
+          cmake -DCMAKE_EXPORT_COMPILE_COMMANDS=ON .
+          cppcheck --project=compile_commands.json --std=c++20 --template='### {id} - {file}:{line}\n**{severity}:** {message}\n```\n{code}\n```\n' 2> cppcheck.md
+      - name: Add CppCheck result to job summary
+        run: |
+          cd codal
+          echo "## Cppcheck output" >> $GITHUB_STEP_SUMMARY
+          echo "$(cat cppcheck.md)" >> $GITHUB_STEP_SUMMARY
+      - name: Upload log file
+        uses: actions/upload-artifact@v4
+        with:
+          name: cppcheck.md
+          path: codal/cppcheck.md
